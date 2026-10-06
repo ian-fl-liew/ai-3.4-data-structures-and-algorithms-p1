@@ -1,802 +1,1091 @@
-# Lesson 3.4: Data Structures and Algorithms (Part 1)
+# Lesson 3.3: Boosting Productivity with GitHub Copilot
 
 ## Lesson Overview
-This lesson introduces the data structures you will use every day in Java — Arrays, ArrayList, LinkedList, ArrayDeque, HashMap, and HashSet, along with their ordered and sorted variants. Students will learn how these structures organise and store data, how to choose the right one for a given problem, and how modern Java (Java 17 and 21) has simplified working with them. By the end of this lesson, learners will be able to select and use the appropriate data structure with confidence.
 
-**Module:** 3.4
-**Duration:** 3 hours
-**Prerequisites:** Basic Java syntax, variables, operators, loops, control flow, classes and objects.
+GitHub Copilot started as an autocomplete tool. It is now an AI agent that plans work, edits multiple files on its own, reviews code like a senior engineer, and can take a written task description and produce a finished pull request without you touching the keyboard.
+
+This session covers that full range. We start with the everyday features you'll use constantly, then move into the agentic capabilities that are changing how professional teams work.
+
+**Prerequisites:** Java classes and objects, collections (`ArrayList`, `HashMap`), arrays, try/catch, VS Code
+
+**Duration:** 2 hours
 
 ---
 
 ## Lesson Objectives
 
-By the end of this lesson, students will be able to:
-- Describe the Java Collections Framework and the difference between an interface and an implementation.
-- Differentiate between linear and hash-based data structures.
-- Implement and manipulate Arrays, ArrayLists, LinkedLists, ArrayDeques, HashMaps, and HashSets.
-- Use records to store data safely in Sets and as Map keys.
-- Apply the appropriate data structure for a given problem.
+By the end of this lesson, you will be able to:
+
+1. **Use** Copilot's core features — ghost text, chat, and slash commands — to write and understand Java code faster
+2. **Select** the right Copilot chat mode (Ask, Agent, Plan) for the task at hand
+3. **Write** precise prompts and manage context to get dramatically better results
+4. **Apply** Agent Mode to implement a multi-file feature autonomously
+5. **Explain** how Copilot's cloud agent and MCP integration work in professional teams
 
 ---
 
-## Part 1: Introduction to Data Structures
+## Session Plan
 
-Data structures are containers that organise and store data so it can be accessed and modified efficiently. Choosing the right data structure affects how quickly your program can process data. Retrieving a record from a list of 10 items is trivial, but the same operation across millions of records is where the choice starts to matter.
-
-Data structures fall into **three categories**:
-
-| Category | Structures | How data is stored |
-|----------|-----------|-------------------|
-| **Linear** | Array, ArrayList, LinkedList, ArrayDeque | Sequentially, one after another |
-| **Hash-Based** | HashMap, HashSet and their variants | By hash code, no sequence |
-| **Non-Linear** | Tree, Binary Tree, Graph | Hierarchically or as a network |
-
-Hash-based structures are their own category. They are neither linear nor non-linear, because elements are placed according to their hash code rather than by position or by hierarchy.
-
-**This lesson covers linear and hash-based structures. Non-linear structures are covered in Lesson 3.5.**
+| Part | Topic | Time |
+|---|---|---|
+| 0 | The Case Study Project | 10 min |
+| 1 | Setup and Core Features | 25 min |
+| 2 | Chat Modes | 10 min |
+| 3 | Prompt and Context Engineering | 30 min |
+| 4 | Agent Mode + Debugging Activity | 35 min |
+| 5 | Custom Agents | 5 min |
+| — | Wrap-up | 5 min |
+| Optional | Beyond the Editor: Cloud Agent and MCP | 5 min |
 
 ---
 
-### A Quick Word on Performance
+# Part 0: The Case Study Project (10 min)
 
-Throughout this lesson you will see notations like **O(1)** and **O(n)**. These are shorthand for how an operation behaves as your data grows:
+Everything in this lesson operates on one codebase — a small e-commerce order and billing system. Four classes, roughly what you'd find in the service layer of a real application.
 
-- **O(1)** — the same speed regardless of how much data you have. Like flipping to a bookmarked page. The size of the book does not matter.
-- **O(n)** — the time grows in proportion to the data. Double the data, double the time. Like checking every locker in a hallway one by one.
-- **O(log n)** — grows, but very slowly. Like finding a word in a dictionary, where each guess eliminates half the remaining pages.
+**You are not building this.** Copy each class into your project and move on. You'll read each one as it becomes relevant.
 
-That is all you need for today. This is vocabulary, not mathematics — we use it to compare structures quickly. Lesson 3.5 goes into this in more depth.
+**Create a folder called `shop` and add these five files.**
 
----
-
-## Part 2: The Java Collections Framework
-
-Java already provides a ready-made toolbox of data structures. You do not need to build a resizable list or a hash table yourself — Java has written, tested, and optimised them for you. This toolbox is called the **Java Collections Framework**, often shortened to JCF.
-
-Everything in this lesson except plain arrays comes from this framework.
-
-### Interfaces and Implementations
-
-The Collections Framework is organised into two layers.
-
-**Interfaces** describe *what a structure does*. `List`, `Set`, `Queue`, and `Map` are interfaces. Think of an interface as a category of behaviour:
-
-- `List` — holds elements in order, duplicates allowed
-- `Set` — holds unique elements only
-- `Queue` — holds elements for processing in a particular order
-- `Map` — holds key and value pairs
-
-**Classes** are the actual implementations you create objects from. `ArrayList`, `LinkedList`, `HashSet`, `TreeMap`, `ArrayDeque` are all classes. These are what you import and instantiate.
-
-> **Note:** Interfaces are covered fully in a later lesson. For now, the practical rule is enough: an interface is the category, a class is the thing you actually create with `new`.
-
-### The Structure
-
-```
-Iterable
-   └── Collection
-         ├── List   →  ArrayList, LinkedList
-         ├── Set    →  HashSet, LinkedHashSet, TreeSet
-         └── Queue  →  ArrayDeque, LinkedList
-
-Map (separate from Collection)
-   └── HashMap, LinkedHashMap, TreeMap
-```
-
-Notice that `Map` sits outside the `Collection` tree. This is deliberate — a `Collection` holds single elements, while a `Map` holds pairs of elements. They are related in purpose but not in structure.
-
-### Declaring by Interface
-
-In professional Java code, you declare the variable using the **interface** and create the object using the **class**:
+### `Product.java`
 
 ```java
-List<String> productNames = new ArrayList<>();
-Map<String, Integer> stockLevels = new HashMap<>();
-Set<String> categories = new HashSet<>();
-```
+public class Product {
 
-The advantage is flexibility. If you later decide `LinkedList` suits your access pattern better, you change one word at the point of creation. Every other line of code that uses that variable continues to work unchanged.
+    private final String sku;
+    private final String name;
+    private final double unitPrice;
+    private int stockQuantity;
 
-You will see this pattern in every production Java codebase.
+    public Product(String sku, String name, double unitPrice, int stockQuantity) {
+        if (sku == null || sku.isBlank()) {
+            throw new IllegalArgumentException("SKU is required");
+        }
+        if (unitPrice < 0) {
+            throw new IllegalArgumentException("Unit price cannot be negative");
+        }
+        this.sku = sku;
+        this.name = name;
+        this.unitPrice = unitPrice;
+        this.stockQuantity = stockQuantity;
+    }
 
-### Modern Shorthand: `var`
+    public String getSku() {
+        return sku;
+    }
 
-Since Java 10, you can let Java infer the type of a local variable:
+    public String getName() {
+        return name;
+    }
 
-```java
-var productNames = new ArrayList<String>();
-```
+    public double getUnitPrice() {
+        return unitPrice;
+    }
 
-This is common in modern codebases. It is only for local variables inside methods, and the type must still be clear from the right hand side. We will use it occasionally so you recognise it when you see it.
+    public int getStockQuantity() {
+        return stockQuantity;
+    }
 
----
+    public void reduceStock(int quantity) {
+        stockQuantity = stockQuantity - quantity;
+    }
 
-## Part 3: Linear Data Structures
-
-### Arrays
-
-An **Array** is a fixed-size, indexed collection of elements of the same data type. It stores data in contiguous memory, which allows direct access by index.
-
-```java
-int[] productPrices = {999, 499, 299, 199, 129};
-
-for (int i = 0; i < productPrices.length; i++) {
-    System.out.println("Index " + i + ": " + productPrices[i]);
+    @Override
+    public String toString() {
+        return sku + " (" + name + ") $" + unitPrice + " x" + stockQuantity;
+    }
 }
 ```
 
-Arrays give **O(1)** access because the position of any element can be calculated directly. The trade-off is rigidity — the size is fixed at creation and cannot grow. Searching for a value without knowing its index requires checking each element, which is **O(n)**.
-
-**Two things worth knowing:**
-
-Arrays use `.length` — a property, with no brackets. Collections use `.size()` — a method, with brackets. This catches people out regularly.
-
-An array is an object. When you write `new int[5]`, an array object is created on the **heap**, and the variable holding it stores a reference to that object. This is the same model used for every object in Java.
-
----
-
-### ArrayList
-
-An **ArrayList** is a resizable list. Internally it is still backed by an array, but Java manages the growing for you.
-
-When the internal array fills up, Java creates a new larger array (roughly 1.5 times the size) and copies the elements across. This copy is **O(n)**, but it happens rarely. Averaged across many additions, `add()` is described as **O(1) amortised**.
-
-If you know roughly how many elements you will add, you can avoid repeated resizing:
+### `PricingService.java`
 
 ```java
-List<String> productNames = new ArrayList<>(10000);
-```
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-#### Core Operations
+public class PricingService {
 
-```java
-List<String> productNames = new ArrayList<>();
-productNames.add("Laptop");
-productNames.add("Phone");
-productNames.add("Tablet");
+    private static final double MEMBER_DISCOUNT = 0.10;
+    private static final int BULK_THRESHOLD = 10;
+    private static final double BULK_DISCOUNT = 0.05;
 
-System.out.println(productNames.get(0));        // Laptop
-System.out.println(productNames.size());        // 3
-System.out.println(productNames.contains("Phone")); // true
+    private final Map<String, Product> catalog;
+    private final List<String> auditLog;
 
-productNames.remove("Phone");
-System.out.println(productNames);               // [Laptop, Tablet]
-```
+    public PricingService() {
+        this.catalog = new HashMap<>();
+        this.auditLog = new ArrayList<>();
+    }
 
-#### Beyond the Basics
+    public void addProduct(Product product) {
+        if (product == null) {
+            throw new IllegalArgumentException("Product is required");
+        }
+        catalog.put(product.getSku(), product);
+    }
 
-These are the methods you will actually reach for in real code.
+    public Product findBySku(String sku) {
+        return catalog.get(sku);
+    }
 
-```java
-List<String> productNames = new ArrayList<>();
-productNames.add("Laptop");
-productNames.add("Phone");
-productNames.add("Tablet");
-productNames.add("Monitor");
+    public double calculateLineTotal(String sku, int quantity) {
+        Product product = catalog.get(sku);
+        double lineTotal = product.getUnitPrice() * quantity;
 
-// set — replace the element at a position
-productNames.set(1, "Smartphone");
-System.out.println(productNames);          // [Laptop, Smartphone, Tablet, Monitor]
+        if (quantity > BULK_THRESHOLD) {
+            lineTotal = lineTotal * (1 - BULK_DISCOUNT);
+        }
 
-// add at a specific index — shifts everything after it to the right
-productNames.add(2, "Keyboard");
-System.out.println(productNames);          // [Laptop, Smartphone, Keyboard, Tablet, Monitor]
+        return lineTotal;
+    }
 
-// indexOf — find the position of a value, returns -1 if not present
-System.out.println(productNames.indexOf("Tablet"));   // 3
-System.out.println(productNames.indexOf("Printer"));  // -1
+    public double calculateOrderTotal(String[] skus, int[] quantities, boolean isMember) {
+        double subtotal = 0;
 
-// subList — a view of part of the list
-System.out.println(productNames.subList(0, 3));  // [Laptop, Smartphone, Keyboard]
+        for (int i = 0; i <= skus.length; i++) {
+            try {
+                subtotal += calculateLineTotal(skus[i], quantities[i]);
+            } catch (Exception e) {
+                auditLog.add("Skipped item at index " + i);
+            }
+        }
 
-// addAll — append another collection
-productNames.addAll(List.of("Mouse", "Webcam"));
+        if (isMember) {
+            subtotal = subtotal - (subtotal * MEMBER_DISCOUNT);
+        }
 
-// removeIf — remove everything matching a condition
-productNames.removeIf(p -> p.startsWith("M"));
-System.out.println(productNames);
+        int roundedTotal = (int) subtotal;
+        auditLog.add("Order total calculated: " + roundedTotal);
+        return roundedTotal;
+    }
 
-// sort the list alphabetically
-Collections.sort(productNames);
-System.out.println(productNames);
-
-// reverse order
-Collections.sort(productNames, Collections.reverseOrder());
-```
-
-> **Note on `removeIf()`:** the part inside the brackets, `p -> p.startsWith("M")`, is a **lambda**. Read it as "for each element p, is it true that p starts with M". Lambdas are covered properly in a later lesson. For now, recognise the shape.
-
-#### Creating Lists
-
-```java
-// Empty and mutable
-List<String> emptyList = new ArrayList<>();
-
-// Fixed and unchangeable — Java 9 onwards
-List<String> fixedList = List.of("Laptop", "Phone");
-
-// Mutable copy of a fixed list
-List<String> mutableCopy = new ArrayList<>(List.of("Laptop", "Phone"));
-```
-
-`List.of()` creates an **immutable** list. Calling `.add()` on it throws an `UnsupportedOperationException` at runtime. This is intentional — immutable collections are safer to pass around because nothing can modify them unexpectedly. When you need to modify, wrap it in `new ArrayList<>()` as shown above.
-
----
-
-### 👨‍💻 Activity 1: Managing a Product List **(10 minutes)**
-
-Create an `ArrayList` of product names and use it to do the following:
-
-1. Add at least six products to the list.
-2. Replace the product at index 2 with a different name using `set()`.
-3. Insert a new product at index 0 so it becomes the first item.
-4. Print the position of one specific product using `indexOf()`.
-5. Print only the first three products using `subList()`.
-6. Remove all products whose name is longer than 7 characters using `removeIf()`.
-7. Sort the remaining list alphabetically and print it.
-
----
-
-### LinkedList
-
-A **LinkedList** stores elements as **nodes**. Each node holds the data and a reference to the next node. The nodes do not need to sit next to each other in memory — Java follows the chain of references.
-
-```java
-LinkedList<String> recentlyViewed = new LinkedList<>();
-
-recentlyViewed.add("Mouse");
-recentlyViewed.add("Keyboard");
-recentlyViewed.add("Monitor");
-
-recentlyViewed.addFirst("Charger");
-recentlyViewed.removeLast();
-
-System.out.println(recentlyViewed);   // [Charger, Mouse, Keyboard]
-```
-
-`addFirst()` and `removeLast()` are **O(1)** — adding or removing at either end only requires updating a couple of references, with no shifting.
-
-The trade-off is access. Getting the element at position 5 means starting at the head and walking node by node, which is **O(n)**.
-
-> **Note:** LinkedList checks whether your index is nearer the head or the tail and traverses from the closer side. So `get(0)` and the last element are effectively instant. It is the middle that costs you.
-
----
-
-### ArrayDeque
-
-A **Deque** (pronounced "deck") is a double-ended queue — you can add and remove from both ends. `ArrayDeque` is the standard implementation.
-
-```java
-Deque<String> recentlyViewed = new ArrayDeque<>();
-
-recentlyViewed.addLast("Mouse");
-recentlyViewed.addLast("Keyboard");
-recentlyViewed.addLast("Monitor");
-
-System.out.println(recentlyViewed.peekFirst());   // Mouse — look without removing
-System.out.println(recentlyViewed.pollFirst());   // Mouse — remove and return
-System.out.println(recentlyViewed);               // [Keyboard, Monitor]
-
-recentlyViewed.addFirst("Charger");
-System.out.println(recentlyViewed);               // [Charger, Keyboard, Monitor]
-```
-
-**Common methods:**
-
-| Method | What it does |
-|--------|-------------|
-| `addFirst()` / `addLast()` | Add to the front or the back |
-| `peekFirst()` / `peekLast()` | Look at an element without removing it |
-| `pollFirst()` / `pollLast()` | Remove and return an element |
-| `push()` / `pop()` | Stack behaviour — add and remove from the front |
-
-#### Which One Should You Use?
-
-This matters in real code:
-
-- **`Stack`** is a legacy class from Java 1.0. It is synchronised, which makes it slower, and it is no longer recommended. Do not use it in new code.
-- **`LinkedList`** works as a queue, but because its nodes are scattered in memory, the processor cannot cache them efficiently. In practice it is usually slower than the alternative.
-- **`ArrayDeque`** is the current recommendation for stack, queue, and deque behaviour. It is backed by an array, which the processor handles far better.
-
-The practical rule: **if you need a stack or a queue, reach for `ArrayDeque`.**
-
----
-
-## Part 4: Hash-Based Data Structures
-
-### HashMap, LinkedHashMap and TreeMap
-
-A **HashMap** stores data as **key and value** pairs. Each key is unique. The key is passed through a hash function which produces a number, and that number determines where the value is stored internally. This is what makes lookups fast regardless of how much data you have.
-
-All three map types implement the `Map` interface. They store key and value pairs and require unique keys. They differ in ordering and speed.
-
-| | HashMap | LinkedHashMap | TreeMap |
-|--|---------|---------------|---------|
-| Order | No guaranteed order | Insertion order | Sorted by key |
-| Speed | O(1) | O(1) | O(log n) |
-| Use when | Speed matters | Order matters | Sorted keys needed |
-
----
-
-#### HashMap
-
-```java
-Map<String, Integer> studentScores = new HashMap<>();
-studentScores.put("Alice", 85);
-studentScores.put("Bob", 92);
-studentScores.put("Charlie", 78);
-
-// getOrDefault — returns a fallback if the key is missing
-System.out.println(studentScores.getOrDefault("David", 0));   // 0
-
-// putIfAbsent — only adds if the key is not already there
-studentScores.putIfAbsent("Alice", 99);
-System.out.println(studentScores.get("Alice"));               // 85, unchanged
-
-System.out.println(studentScores);   // order not guaranteed
-```
-
-> **Key rule:** keys must be unique. Putting the same key again **overwrites** the existing value rather than creating a second entry. Values may repeat freely.
-
-#### Iterating a Map
-
-```java
-for (Map.Entry<String, Integer> entry : studentScores.entrySet()) {
-    System.out.println(entry.getKey() + " scored " + entry.getValue());
+    public List<String> getAuditLog() {
+        return auditLog;
+    }
 }
 ```
 
-`entrySet()` gives you each pair as a `Map.Entry`, so you get both the key and the value in one pass. You can also use `keySet()` for keys only or `values()` for values only.
-
-#### Adding to a List Inside a Map — the Manual Way
-
-Before looking at `computeIfAbsent()`, it helps to see what it replaces.
-
-When a Map holds Lists as its values, you cannot add an item until a List actually exists for that key. So it takes two steps: create the List, then add to it.
+### `OrderService.java`
 
 ```java
-Map<String, List<String>> byCategory = new HashMap<>();
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-// Step 1 — create the empty list once, and store it under the key
-byCategory.put("Electronics", new ArrayList<>());
+public class OrderService {
 
-// Step 2 — get that list back, and add as many items as you like
-byCategory.get("Electronics").add("Laptop");
-byCategory.get("Electronics").add("Phone");
-byCategory.get("Electronics").add("Tablet");
+    private final PricingService pricingService;
+    private final Map<String, Double> ordersById;
+    private int orderCounter;
 
-System.out.println(byCategory);
-// {Electronics=[Laptop, Phone, Tablet]}
-```
+    public OrderService(PricingService pricingService) {
+        if (pricingService == null) {
+            throw new IllegalArgumentException("PricingService is required");
+        }
+        this.pricingService = pricingService;
+        this.ordersById = new HashMap<>();
+        this.orderCounter = 0;
+    }
 
-`put()` creates the key and stores an empty list as its value. `get()` hands that list back so you can add to it.
+    public String placeOrder(String[] skus, int[] quantities, boolean isMember) {
+        if (skus == null || quantities == null) {
+            throw new IllegalArgumentException("Order items are required");
+        }
 
-#### `computeIfAbsent()`
+        List<String> unavailable = new ArrayList<>();
+        for (int i = 0; i < skus.length; i++) {
+            Product product = pricingService.findBySku(skus[i]);
+            if (product == null) {
+                unavailable.add(skus[i]);
+            } else if (product.getStockQuantity() < quantities[i]) {
+                unavailable.add(skus[i]);
+            }
+        }
 
-This one is worth learning properly because it appears constantly in real code.
+        if (!unavailable.isEmpty()) {
+            throw new IllegalStateException("Unavailable items: " + unavailable);
+        }
 
-Suppose you want to group products by category. Without `computeIfAbsent()` you have to check whether the list exists first:
+        double total = pricingService.calculateOrderTotal(skus, quantities, isMember);
 
-```java
-Map<String, List<String>> byCategory = new HashMap<>();
+        for (int i = 0; i < skus.length; i++) {
+            pricingService.findBySku(skus[i]).reduceStock(quantities[i]);
+        }
 
-// The long way
-if (!byCategory.containsKey("Electronics")) {
-    byCategory.put("Electronics", new ArrayList<>());
+        orderCounter++;
+        String orderId = "ORD-" + orderCounter;
+        ordersById.put(orderId, total);
+        return orderId;
+    }
+
+    public double getOrderTotal(String orderId) {
+        return ordersById.get(orderId);
+    }
+
+    public Map<String, Double> getAllOrders() {
+        return ordersById;
+    }
 }
-byCategory.get("Electronics").add("Laptop");
 ```
 
-With `computeIfAbsent()`, that becomes one line:
+### `BillingService.java`
 
 ```java
-Map<String, List<String>> byCategory = new HashMap<>();
+import java.util.HashMap;
+import java.util.Map;
 
-byCategory.computeIfAbsent("Electronics", k -> new ArrayList<>()).add("Laptop");
-byCategory.computeIfAbsent("Electronics", k -> new ArrayList<>()).add("Phone");
-byCategory.computeIfAbsent("Furniture", k -> new ArrayList<>()).add("Desk");
+public class BillingService {
 
-System.out.println(byCategory);
-// {Electronics=[Laptop, Phone], Furniture=[Desk]}
-```
+    private final OrderService orderService;
+    private final Map<String, String> paymentStatusByOrder;
+    private final Map<String, Double> refundsByOrder;
 
-Read it as: "get the list for this key, and if there isn't one yet, create an empty list first — then add to it."
+    public BillingService(OrderService orderService) {
+        if (orderService == null) {
+            throw new IllegalArgumentException("OrderService is required");
+        }
+        this.orderService = orderService;
+        this.paymentStatusByOrder = new HashMap<>();
+        this.refundsByOrder = new HashMap<>();
+    }
 
-This pattern — a Map whose values are Lists — is extremely common. Any time you need to group things, this is the idiom.
+    public void recordPayment(String orderId, double amountPaid) {
+        double total = orderService.getOrderTotal(orderId);
 
----
+        if (amountPaid >= total) {
+            paymentStatusByOrder.put(orderId, "PAID");
+        } else {
+            paymentStatusByOrder.put(orderId, "PARTIAL");
+        }
+    }
 
-#### LinkedHashMap
+    public String getPaymentStatus(String orderId) {
+        return paymentStatusByOrder.get(orderId);
+    }
 
-```java
-Map<String, Integer> examResults = new LinkedHashMap<>();
-examResults.put("Alice", 85);
-examResults.put("Bob", 92);
-examResults.put("Charlie", 78);
+    public void issueRefund(String orderId, double amount) {
+        double existingRefund = 0;
+        if (refundsByOrder.containsKey(orderId)) {
+            existingRefund = refundsByOrder.get(orderId);
+        }
+        refundsByOrder.put(orderId, existingRefund + amount);
+        paymentStatusByOrder.put(orderId, "REFUNDED");
+    }
 
-for (Map.Entry<String, Integer> entry : examResults.entrySet()) {
-    System.out.println(entry.getKey() + " scored " + entry.getValue());
+    public double getTotalRefunded(String orderId) {
+        if (refundsByOrder.containsKey(orderId)) {
+            return refundsByOrder.get(orderId);
+        }
+        return 0;
+    }
+
+    public void printInvoice(String orderId) {
+        System.out.println("--- Invoice " + orderId + " ---");
+        System.out.println("Total:    $" + orderService.getOrderTotal(orderId));
+        System.out.println("Status:   " + getPaymentStatus(orderId));
+        System.out.println("Refunded: $" + getTotalRefunded(orderId));
+    }
 }
-// Always in insertion order:
-// Alice scored 85
-// Bob scored 92
-// Charlie scored 78
 ```
+
+### `ShopDemo.java`
+
+```java
+public class ShopDemo {
+
+    public static void main(String[] args) {
+        PricingService pricingService = new PricingService();
+        pricingService.addProduct(new Product("SKU-1", "Mechanical Keyboard", 129.99, 50));
+        pricingService.addProduct(new Product("SKU-2", "USB-C Cable", 12.50, 200));
+        pricingService.addProduct(new Product("SKU-3", "Monitor Stand", 79.00, 15));
+
+        OrderService orderService = new OrderService(pricingService);
+        BillingService billingService = new BillingService(orderService);
+
+        String[] skus = {"SKU-1", "SKU-2"};
+        int[] quantities = {1, 10};
+
+        String orderId = orderService.placeOrder(skus, quantities, true);
+        System.out.println("Placed order: " + orderId);
+
+        billingService.recordPayment(orderId, 200.00);
+        billingService.printInvoice(orderId);
+
+        System.out.println();
+        System.out.println("Audit log:");
+        for (String entry : pricingService.getAuditLog()) {
+            System.out.println("  " + entry);
+        }
+    }
+}
+```
+
+## Run It
+
+Run `ShopDemo.java`. You should see:
+
+```
+Placed order: ORD-1
+--- Invoice ORD-1 ---
+Total:    $229.0
+Status:   PARTIAL
+Refunded: $0.0
+
+Audit log:
+  Skipped item at index 2
+  Order total calculated: 229
+```
+
+**Look at that output carefully.** The program ran without crashing and produced a plausible invoice. But there are already two problems visible in those seven lines:
+
+- `Skipped item at index 2` — the order only had two items, at index 0 and 1. What is index 2?
+- The total is a round `$229.0`. Real prices were `$129.99` and `$12.50` each. Where did the cents go?
+
+We'll let Copilot find these — and several more you can't see yet.
+
+> This is what makes the codebase useful for the lesson. It compiles, it runs, it looks fine. That's exactly the kind of code that reaches production and quietly costs money.
 
 ---
 
-#### TreeMap
+# Part 1: Setup and Core Features (25 min)
+
+## What Copilot Actually Is
+
+Copilot is an AI model that reads your code as context and predicts what should come next. Everything in this lesson — inline suggestions, chat answers, autonomous agents — is that same mechanism exposed through different interfaces.
+
+The practical consequence: **output quality is determined by input context.** We'll come back to this repeatedly.
+
+## Step 1: Install and Sign In
+
+1. Open VS Code
+2. Click **Extensions** in the sidebar (`Ctrl+Shift+X`)
+3. Search for **GitHub Copilot** and install it
+4. Also install **GitHub Copilot Chat**
+5. Click the **Accounts** icon at the bottom of the sidebar → **Sign in with GitHub**
+6. Check the bottom status bar — the Copilot icon should be visible and active
+
+> You have GitHub Copilot Business through this programme, which includes every feature in this lesson.
+
+## Step 2: Ghost Text and the Suggestion Toolbar
+
+As you type, Copilot shows suggestions in grey. This is **ghost text**. When it appears, a small **floating toolbar** appears above it:
+
+| Control | What it does |
+|---|---|
+| **`<` `>` arrows** | Cycle through alternative suggestions |
+| **Accept** (`Tab`) | Take the entire suggestion |
+| **Accept Word** (`Ctrl + →`) | Take just the next word, then keep typing your own |
+| **`Esc`** | Dismiss the suggestion |
+
+**Use the toolbar rather than memorising shortcuts.** It shows the keyboard equivalents next to each action, so you'll pick them up naturally.
+
+**Accept Word is the one worth knowing.** When a suggestion starts right and goes wrong halfway, you don't have to accept everything and delete. Take it word by word until it stops being useful, then type your own.
+
+**Try it now.** Create a scratch file and type this signature, then press Enter:
 
 ```java
-TreeMap<String, Integer> rankings = new TreeMap<>();
-rankings.put("Charlie", 78);
-rankings.put("Alice", 85);
-rankings.put("Bob", 92);
-
-System.out.println(rankings.firstKey());          // Alice
-System.out.println(rankings.lastKey());           // Charlie
-System.out.println(rankings.headMap("Charlie"));  // {Alice=85, Bob=92}
-
-System.out.println(rankings);   // {Alice=85, Bob=92, Charlie=78} always sorted
+    public static int countVowels(String text) {
 ```
 
-`firstKey()`, `lastKey()`, and `headMap()` exist only on TreeMap, because only TreeMap guarantees an order to work with.
+When the suggestion appears:
 
-By default TreeMap sorts by **natural order** — alphabetical for Strings, numerical for numbers.
+1. Click the **`>` arrow** to see an alternative implementation
+2. Click **`<`** to go back
+3. Press `Ctrl + →` a few times — watch it accept one word at a time
+4. Press `Esc` to dismiss the rest
+5. Press `Tab` on the next suggestion to accept it fully
+
+> **You may also see a green highlighted block appear on its own.** That's **Next Edit Suggestion** — a separate feature that predicts an edit *elsewhere in the file*, based on a change you just made, rather than at your cursor. Accept it with `Tab`, dismiss with `Esc`.
+
+> Older material lists `Alt + ]` and `Alt + [` for cycling suggestions. These only work on true ghost text and behave inconsistently across platforms. The toolbar arrows do the same job reliably.
+
+## Step 3: Copilot Chat
+
+Open Chat with `Ctrl+Alt+I`. **Set the mode dropdown at the bottom of the chat box to `Ask`** — this means Copilot will answer and propose code, but won't modify your files until you tell it to.
+
+Slash commands are shortcuts for common requests:
+
+| Command | What it does |
+|---|---|
+| `/explain` | Explains the selected code |
+| `/fix` | Finds and fixes bugs in the selected code |
+| `/tests` | Generates unit tests |
+
+### `/explain` — Understanding Code
+
+Open `PricingService.java`, select the `calculateOrderTotal` method, and type:
+
+```
+/explain
+```
+
+Copilot walks through what the method does. Notice it also flags problems as it goes — the loop reading past the end of the array, the cast that discards cents.
+
+**It tells you what's wrong. It doesn't change anything.**
+
+### `/fix` — Correcting Code
+
+Same selection, now type:
+
+```
+/fix
+```
+
+Same diagnosis, but this time you get corrected code. Hover over the code block in the chat panel and click **Apply in Editor** — the change appears in your file as a diff you can keep or undo.
+
+> **The distinction:** `/explain` gives you understanding, you do the work. `/fix` gives you the patch. Use `/explain` on unfamiliar code you've inherited; use `/fix` when you already understand the context.
+
+### `/tests` — Generating Test Cases
+
+Select `calculateLineTotal` and type:
+
+```
+/tests
+```
+
+Copilot produces a full JUnit test class. Read what it generated — notice it didn't test random values. It grouped inputs into categories that could behave differently: normal quantities, quantities at the bulk threshold, quantities above it, zero, negatives, unknown SKUs.
+
+That's **equivalence partitioning** — the same reasoning you'd apply writing tests by hand. Reading Copilot's groupings is a useful way to check your own coverage.
+
+> **We can't run these.** There's no build tool (Maven or Gradle) configured in this project, so JUnit isn't on the classpath. For today, `/tests` is a reading exercise. Once we move to Spring Boot, this becomes something you'll use for real.
+
+### Slash Commands Take Arguments
+
+This is the part most people never discover. **A bare slash command is a default — Copilot guesses what you want. Add text after it and you're giving a scoped instruction.**
+
+Try each of these on `PricingService`:
+
+```
+/explain Focus on the loop logic only, ignore the discount calculations
+```
+
+```
+/fix Fix only the integer truncation problem, leave the loop alone
+```
+
+```
+/tests Only test the error paths — unknown SKU and empty arrays
+```
+
+Run that `/fix` example and check the result carefully: **did it actually leave the loop alone, or did it "helpfully" fix the off-by-one anyway?**
+
+Either answer is worth seeing. If it respected your constraint, that's precise scoping. If it overrode you, that's a lesson in verifying output rather than trusting instructions were followed.
+
+> **Why this matters in production:** you often want a narrow, reviewable change — not a broad rewrite touching code you didn't ask about. Scoping the command gives you that.
+
+### Generating Documentation
+
+**Javadoc** is Java's standard documentation format — a comment block above a method describing what it does, its parameters, its return value, and the exceptions it can throw. It's what appears in IDE tooltips when someone calls your method.
+
+Select `calculateOrderTotal` and ask:
+
+```
+Add Javadoc to this method, documenting all parameters, the return value, 
+and any exceptions it can throw
+```
+
+Then click **Apply in Editor**.
+
+> **Note:** older material references a `/doc` slash command for this. It's been folded into general chat and may not exist in your version. This is the pattern with Copilot — shortcuts come and go, but the capability stays. **If a command disappears, write the prompt yourself.** That skill doesn't expire.
 
 ---
 
-### 👨‍💻 Activity 2: Grouping Products by Category **(10 minutes)**
+# Part 2: Chat Modes (10 min)
 
-Create a `Map<String, List<String>>` to group product names under their category.
+Copilot Chat operates in different modes, selected from a **dropdown at the bottom of the chat input**. The mode changes what Copilot is permitted to do with your request.
 
-1. Using `computeIfAbsent()`, add at least six products across three categories.
-2. Print the whole map.
-3. Print just the products in one category using `get()`.
-4. Use `getOrDefault()` to look up a category that does not exist, and show that it returns an empty list rather than `null`.
-5. Change your `HashMap` to a `LinkedHashMap` and run it again. Describe what changed in the output.
+| Mode | Behaviour | Use it when |
+|---|---|---|
+| **Ask** | Answers and proposes code. Makes no changes unless you click Apply. | You want to understand something, or review a suggestion before it lands |
+| **Agent** | Decides which files to change, edits them, runs commands, and iterates on errors. | You want a task completed, not a specific edit |
+| **Plan** | Explores the codebase, asks clarifying questions, and produces a reviewable plan before writing any code. | The task is large, unfamiliar, or risky |
 
----
+**The key distinction:** Ask does what you tell it. **Agent decides for itself** — which files to open, what to change, whether to run a command, and whether the result is correct. That autonomy is the whole point, and also the whole risk.
 
-### HashSet, LinkedHashSet and TreeSet
+**Try it now.** Open the mode dropdown and look at the options. **Leave it on Ask** — we'll switch to Agent in Part 4.
 
-A **HashSet** stores unique elements. Duplicates are silently ignored. Internally a HashSet is built on top of a HashMap — each element you add becomes a key in that map, and the value is an unused placeholder. That is the whole mechanism.
+> **A note on Edit mode:** you may find older tutorials referencing a fourth mode called Edit, or a separate "Copilot Edits" panel. It's been removed and absorbed into Agent, which does everything Edit did plus tool use and error correction. If a tutorial tells you to select Edit and you can't find it, that's why.
 
-| | HashSet | LinkedHashSet | TreeSet |
-|--|---------|---------------|---------|
-| Order | No guaranteed order | Insertion order | Sorted |
-| Speed | O(1) | O(1) | O(log n) |
-| Use when | Speed and uniqueness | Order and uniqueness | Sorted uniqueness |
+> **Custom agents:** the dropdown also has **Configure Custom Agents**. You can define your own mode — a named agent with its own instructions, tools, and preferred model. We'll build one in Part 5.
 
 ---
 
-#### HashSet
+# Part 3: Prompt and Context Engineering (30 min)
 
-```java
-Set<String> categories = new HashSet<>();
-categories.add("Electronics");
-categories.add("Clothing");
-categories.add("Electronics");   // duplicate, silently ignored
+Two things control output quality. Getting these right is the difference between a tool that occasionally helps and one that meaningfully changes your pace.
 
-System.out.println(categories.contains("Clothing"));   // true
-System.out.println(categories.size());                 // 2
+## Context: What You Hand It
 
-categories.removeIf(c -> c.startsWith("E"));
-System.out.println(categories);                        // [Clothing]
+Copilot starts from the file you're in and whatever you've selected. Beyond that it will often go and find related files itself — ask about `placeOrder` and it will usually open `PricingService` on its own and tell you so.
+
+**Watch for the "Used N references" line above its answer.** Click the arrow to expand it. That list is exactly which files informed the response. When an answer looks wrong, the reason is usually in there: it read something you didn't expect, or missed something you assumed it had.
+
+### Context Isn't Only Files
+
+The **Add Context** button (the paperclip in the chat input) attaches more than source code. This matters, because Copilot can go and find a `.java` file by itself — it cannot find any of these:
+
+| Attach | What it gives Copilot |
+|---|---|
+| **Problems** | The exact errors and warnings in your editor right now |
+| **Terminal output** | A stack trace or a failed build, without pasting it |
+| **Symbols** | One method or class, instead of a 2,000-line file |
+| **Image / Screenshot** | A UI mockup, an error dialog, a diagram |
+| **Instructions** | Your conventions file, forced into this request |
+| **Sessions** | A chat you had earlier |
+
+None of that lives in your source code, so no amount of searching will reach it. Attaching is how you hand it evidence it has no other way to get.
+
+**Try it.** Open `PricingService.java` and attach **Problems**, then ask what's wrong. You didn't describe or paste anything — it has the exact file, line, and message.
+
+> **Right context, not maximum context.** Attaching five irrelevant files makes answers worse, not better — the signal gets diluted and it may anchor on the wrong code. Same discipline as writing a specific prompt rather than a long one.
+
+## Prompting: Say What You Actually Want
+
+Here's a contrast worth doing carefully.
+
+Both prompts below target the same method — `calculateOrderTotal` in `PricingService`. Select it before each one.
+
+### Prompt A
+
+```
+This method is messy and hard to follow. Clean it up, make it more robust, 
+and follow best practices.
 ```
 
-Notice that adding a duplicate does not throw an error. Uniqueness is enforced automatically — you never need to check `contains()` before adding.
+This is a *reasonable-sounding* request. It's the kind of thing people write constantly. But look at what it actually communicates: nothing specific. "Robust" against what? "Best practices" by whose definition? Which parts are you willing to have changed?
 
-#### Set Operations
+Copilot will do *something*. It may restructure the loop, rename variables, extract helper methods, change the return type, add validation you didn't want, or all of the above. The result might be fine. You now have to read every line to find out.
 
-```java
-Set<String> allCategories = new LinkedHashSet<>(
-    List.of("Electronics", "Clothing", "Furniture", "Sports"));
+### Prompt B
 
-Set<String> activeCategories = Set.of("Clothing", "Sports");
+```
+Fix three specific problems in this method, changing nothing else:
+1. The loop reads one index past the end of the array
+2. The catch block swallows real errors — it should not catch generic Exception
+3. Casting the total to int discards cents — return the exact double value
 
-// retainAll — keep only what appears in both
-Set<String> active = new LinkedHashSet<>(allCategories);
-active.retainAll(activeCategories);
-System.out.println(active);        // [Clothing, Sports]
-
-// removeAll — remove everything that appears in the other set
-Set<String> inactive = new LinkedHashSet<>(allCategories);
-inactive.removeAll(activeCategories);
-System.out.println(inactive);      // [Electronics, Furniture]
-
-// addAll — merge, duplicates ignored
-Set<String> combined = new LinkedHashSet<>(allCategories);
-combined.addAll(Set.of("Books", "Clothing"));
-System.out.println(combined);
+Do not change the method signature, the discount percentages, or the audit 
+log messages.
 ```
 
-`retainAll()`, `removeAll()`, and `addAll()` give you set intersection, difference, and union without writing any loops.
+Run both and compare the diffs.
+
+Prompt B produces exactly three changes, each one reviewable in seconds. Prompt A produces a rewrite you have to audit.
+
+### The Pattern That Works
+
+| Element | Example from Prompt B |
+|---|---|
+| **Action** | "Fix" |
+| **Target** | "three specific problems in this method" |
+| **Constraint** | "changing nothing else", "do not change the method signature" |
+| **Standard** | "return the exact double value" |
+
+## Why This Requires Knowing Java
+
+Look again at Prompt B. To write it, you had to know:
+
+- That `i <= array.length` is an off-by-one error
+- That `catch (Exception e)` is too broad and hides real failures
+- That casting a `double` to `int` truncates rather than rounds
+- That method signatures are a contract other code depends on
+
+**None of that came from Copilot. It came from you.**
+
+This is the honest answer to "why do I still need to learn the fundamentals if AI writes the code." Prompt A is what you write when you don't know what's wrong. Prompt B is what you write when you do. The gap between those two prompts is the gap between accepting whatever you're given and directing the work.
+
+The engineers who get the most out of these tools are not the ones who've memorised the most prompts. They're the ones who understand their code well enough to say precisely what they want — and to recognise when the answer is wrong.
+
+**Learn the fundamentals so you can stay in charge of the output.**
+
+## Custom Instructions: Prompting Once, Permanently
+
+Rather than repeating your standards in every prompt, write them once in a file Copilot reads automatically.
+
+In your terminal, from the project root:
+
+```bash
+mkdir -p .github
+```
+
+Create `.github/copilot-instructions.md`:
+
+```markdown
+# Project Conventions
+
+- Validate method parameters and throw IllegalArgumentException for invalid input
+- Never catch generic Exception — catch the specific type you expect
+- Use BigDecimal or integer cents for money; never truncate to int
+- Use guard clauses rather than nested conditionals
+- Add Javadoc to all public methods
+- Return defensive copies of collections from getters
+```
+
+Chat and Agent requests in this project now follow these rules without being asked. This is how teams keep AI-generated code consistent with their standards.
+
+> Note that this shapes **chat and agent** responses. It does not change inline ghost-text completions as you type.
+
+**Test it.** Ask Copilot to add a new method to `BillingService`:
+
+```
+Add a method to calculate the outstanding balance for an order — the total 
+minus any payments and refunds recorded.
+```
+
+Check the result against the conventions file. Did it validate parameters? Avoid truncating money? Add Javadoc?
+
+> Custom instructions strongly influence output. They don't guarantee it. Still review.
+
+## Rules for Specific Files
+
+`.github/copilot-instructions.md` applies everywhere. Sometimes you want narrower rules — standards that only make sense for one language, one layer, or one class.
+
+Create a folder called `.github/instructions/` and add files ending in `.instructions.md`. The filename pattern matters: it must end in `.instructions.md`, not `-instructions.md`.
+
+Each file starts with frontmatter containing an `applyTo` glob, which decides where the rules apply.
+
+**Every Java file** — `.github/instructions/java.instructions.md`
+
+```markdown
+---
+description: "General Java standards for this project."
+applyTo: "**/*.java"
+---
+
+- Use guard clauses rather than nested conditionals.
+- Add Javadoc to all public methods.
+- Validate method parameters and throw IllegalArgumentException for invalid input.
+```
+
+**One specific class** — `.github/instructions/pricing.instructions.md`
+
+```markdown
+---
+description: "Rules for changes to pricing calculations."
+applyTo: "**/PricingService.java"
+---
+
+- Keep changes limited to the requested task.
+- Do not change method signatures unless explicitly requested.
+- Preserve discount percentages and audit log messages unless explicitly requested.
+- Use loop bounds that do not access an index past the end.
+- Do not catch generic Exception or silently swallow errors.
+- Return monetary totals without integer truncation.
+```
+
+Now `PricingService.java` gets both files — the general Java rules plus the pricing-specific ones. Every other Java file gets only the general ones.
+
+**Check what's actually loaded:** type `/instructions` in chat. Copilot lists every instruction file currently active, including any supplied by your extensions.
+
+### Which goes where
+
+| File | Applies to |
+|---|---|
+| `.github/copilot-instructions.md` | The whole project, always |
+| `.github/instructions/*.instructions.md` | Wherever its `applyTo` glob matches |
+
+**Why bother splitting them:** money-handling rules belong on the pricing class, not on every file in the project. Narrow rules where they're needed, general rules everywhere else — and less irrelevant context loaded on each request.
+
+## Skills — Procedures Rather Than Rules
+
+Instructions are **rules**: things that are always true, in no particular order. Sometimes what you want instead is a **procedure** — the steps for doing one particular job the way your team does it.
+
+That's a skill. Skills live in `.github/skills/<name>/SKILL.md`, and unlike instructions they're only loaded when the task actually matches.
+
+**`.github/skills/new-class/SKILL.md`**
+
+```markdown
+---
+name: new-class
+description: Use when adding a new class to this project.
+---
+
+# Adding a new class
+
+1. Make all fields `private`. Use `final` for anything that shouldn't change
+   after construction.
+2. Validate every constructor parameter before assigning it. Throw
+   IllegalArgumentException with a clear message if something is invalid.
+3. Add getters. Only add a setter if the field genuinely needs to change later.
+4. Override `toString()` so the object prints readably.
+5. Add a few lines to ShopDemo that create the object and print it.
+```
+
+Now ask Copilot to add a `Supplier` class with a name and a contact email. Without the skill it invents its own shape. With it, you get private final fields, a validating constructor, getters, `toString`, and demo lines in `ShopDemo` — the same way, every time.
+
+The `description` is the trigger: Copilot reads descriptions to decide whether a skill is relevant. You can also run it directly by typing `/new-class` in chat.
+
+| | Instructions | Skill |
+|---|---|---|
+| Shape | A list of rules | Numbered steps, in order |
+| Loaded | Always, or when `applyTo` matches | Only when the task matches |
+| Example | "Never catch generic Exception" | "To add a class: first this, then this" |
+
+**The simple version:** instructions are the house rules on the wall. A skill is a recipe card you pull off the shelf when that job comes up. Add one when you notice yourself explaining the same procedure to Copilot more than once.
 
 ---
 
-#### TreeSet
+# Part 4: Agent Mode — Autonomous Development (35 min)
+
+Everything so far has been you directing Copilot precisely. Agent Mode is different: you describe an outcome, and it works out the steps.
+
+## What Agent Mode Does
+
+Given a task, it:
+
+1. Searches your project to understand the structure
+2. Decides which files need creating or modifying
+3. Makes changes across all of them
+4. Runs commands if needed — compiling, running the program
+5. Reads any errors and corrects itself
+6. Presents everything for you to keep or undo
+
+Steps 4 and 5 are what separate this from everything else. It doesn't just write code — it checks whether the code worked.
+
+## Demo: Adding Refund Validation
+
+**Switch the mode dropdown to Agent.** Then:
+
+```
+Add refund validation to the billing system.
+
+Requirements:
+- A refund cannot exceed the order total
+- Total refunds across multiple partial refunds cannot exceed the order total
+- Refunds can only be issued against orders that have been paid
+- Throw IllegalStateException with a clear message when a refund is invalid
+- Only mark an order REFUNDED when the full total has been refunded; use 
+  PARTIALLY_REFUNDED otherwise
+- Update ShopDemo to demonstrate a valid refund, a partial refund, and a 
+  rejected over-refund
+
+Follow the existing code style.
+```
+
+**Watch what it does.** It will work through the files one at a time, showing what it's changing as it goes.
+
+**When it finishes:**
+
+1. Review each changed file — click through the diffs
+2. Check how it handled the "paid" requirement. `getPaymentStatus` returns a `String`, and the existing code uses string literals like `"PAID"`. Did Copilot keep using strings, or did it introduce an enum? **You didn't specify.** It made that decision for you.
+3. Run `ShopDemo.java` and confirm all three refund scenarios behave correctly
+4. Click **Keep** to accept, or **Undo** to revert
+
+## The Point of That Exercise
+
+You didn't tell it to add an enum, or a private helper, or whatever approach it chose. You described an outcome and it made design decisions on your behalf.
+
+**That's the value and the risk in one sentence.** On code you understand, that's leverage — it did in two minutes what would have taken you twenty. On code you don't understand, you've just merged decisions you can't evaluate.
+
+## Plan Mode
+
+To see the reasoning before any code changes, switch the dropdown to **Plan**.
+
+**Try the same prompt in Plan mode.** Instead of editing files, Copilot produces a written implementation plan — which files it intends to change and why. You approve, and only then does it execute.
+
+For unfamiliar or high-risk code, this is the safer default.
+
+## Activity: Debugging with Agent Mode (15 min)
+
+Create a new file called `StockReport.java`. It is riddled with bugs — compile errors, crashes, and quiet wrong answers. Don't read it closely and don't try to fix anything. Hand it straight to the agent.
 
 ```java
-TreeSet<String> sortedCategories = new TreeSet<>(
-    List.of("Furniture", "Electronics", "Clothing"));
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-System.out.println(sortedCategories.first());                    // Clothing
-System.out.println(sortedCategories.last());                     // Furniture
-System.out.println(sortedCategories.headSet("Furniture"));       // [Clothing, Electronics]
-System.out.println(sortedCategories.subSet("Clothing", "Furniture")); // [Clothing, Electronics]
+public class StockReport {
 
-System.out.println(sortedCategories);   // [Clothing, Electronics, Furniture] always sorted
+    private final List<Integer> dailySales;
+    private final Map<String, Integer> unitsByProduct;
+    private String reportTitle;
+
+    public StockReport(String reportTitle) {
+        this.dailySales = new ArrayList<>();
+        this.unitsByProduct = new HashMap<>();
+    }
+
+    public void recordSale(String product, int units) {
+        dailySales.add(units)
+        unitsByProduct.add(product, units);
+    }
+
+    public int totalUnits() {
+        int total = 0;
+        for (int i = 0; i < dailySales.length(); i++) {
+            total += dailySales.get(i);
+        }
+        return total;
+    }
+
+    public double averageSales() {
+        int total = 0;
+        for (int i = 0; i < dailySales.size() - 1; i++) {
+            total += dailySales.get(i);
+        }
+        return total / dailySales.size();
+    }
+
+    public int highestDay() {
+        int highest = 0;
+        for (int i = 1; i < dailySales.size(); i++) {
+            if (dailySales.get(i) > highest) {
+                highest = dailySales.get(i);
+            }
+        }
+        return highest;
+    }
+
+    public int lowestDay() {
+        int lowest = dailySales.get(0);
+        for (int i = 0; i < dailySales.size(); i++) {
+            if (dailySales.get(i) > lowest) {
+                lowest = dailySales.get(i);
+            }
+        }
+        return lowest;
+    }
+
+    public int daysAboveAverage() {
+        int count = 0;
+        for (int i = 0; i < dailySales.size(); i++) {
+            if (dailySales.get(i) >= averageSales()) {
+                count = 1;
+            }
+        }
+        return count;
+    }
+
+    public double percentageOfTarget(int target) {
+        return (dailySales.size() / target) * 100;
+    }
+
+    public boolean isTopProduct(String product) {
+        String best = null;
+        int bestUnits = 0;
+        for (Map.Entry<String, Integer> entry : unitsByProduct.entrySet()) {
+            if (entry.getValue() > bestUnits) {
+                bestUnits = entry.getValue();
+                best = entry.getKey();
+            }
+        }
+        return product == best;
+    }
+
+    public String summary() {
+        return reportTitle.toUpperCase() + ": " + totalUnits() + " units sold";
+    }
+
+    public static void main(String[] args) {
+        StockReport report = new StockReport("Q1 Sales");
+
+        report.recordSale("Keyboard", 10);
+        report.recordSale("Cable", 14);
+        report.recordSale("Keyboard", 6);
+        report.recordSale("Monitor", 10);
+
+        System.out.println(report.summary());
+        System.out.println("Total units:        " + report.totalUnits());
+        System.out.println("Average:            " + report.averageSales());
+        System.out.println("Highest day:        " + report.highestDay());
+        System.out.println("Lowest day:         " + report.lowestDay());
+        System.out.println("Days above average: " + report.daysAboveAverage());
+        System.out.println("Percent of target:  " + report.percentageOfTarget(50));
+        System.out.println("Keyboard is top?    " + report.isTopProduct("Keyboard"));
+
+        StockReport emptyReport = new StockReport("Empty");
+        System.out.println("Lowest day:         " + emptyReport.lowestDay());
+    }
+}
 ```
+
+### Step 1: Let the agent debug it
+
+In **Agent** mode:
+
+```
+StockReport.java is broken. Compile it, run it, and fix whatever stops it
+from working. Keep going until it runs cleanly.
+```
+
+Watch the chat panel. This takes several rounds, and you can see every one of them:
+
+1. Compiles → `';' expected`. Fixes it.
+2. Compiles → two more errors. `Map` has no `add()`, `List` has no `length()`. Fixes both.
+3. Compiles clean. Runs → `NullPointerException`, because `reportTitle` is never assigned in the constructor. Fixes it.
+4. Runs → `IndexOutOfBoundsException` from `lowestDay()` on an empty report. Adds a guard.
+5. Runs clean. Reports it's done.
+
+Click the arrow next to any command block to see the actual `javac` and `java` calls.
+
+**Nobody told it what any of those were.** It found each one by running the code and reading what came back.
+
+### Step 2: Now check the numbers
+
+The agent says it's finished. The program runs. Every one of those fixes was correct.
+
+**Here is what the output should be.** Work it out yourself from the sales data — 10, 14, 6 and 10, across Keyboard, Cable, Keyboard, Monitor:
+
+```
+Q1 SALES: 40 units sold
+Total units:        40
+Average:            10.0
+Highest day:        14
+Lowest day:         6
+Days above average: 1
+Percent of target:  80.0
+Keyboard is top?    true
+```
+
+Compare that against what you actually got. Depending on your model, several of these will still be wrong:
+
+| Line | Common wrong answer | The bug behind it |
+|---|---|---|
+| Average | `7.0` | Loop stops one short, **and** integer division |
+| Lowest day | `14` | Comparison is `>` where it should be `<` |
+| Percent of target | `0.0` | Uses day count instead of total units, **and** integer division |
+| Keyboard is top? | `false` | `put()` overwrites instead of accumulating, **and** `==` instead of `.equals()` |
+
+Not one of these threw an exception. Not one produced a compiler warning. The program exited cleanly with every one of them wrong.
+
+Feed them back one at a time, with the expected value:
+
+```
+lowestDay() returns 14 for the values 10, 14, 6, 10. It should return 6.
+Find and fix the cause.
+```
+
+### Step 3: The bug the test data is hiding
+
+Look at `highestDay()` once more, even if it printed the right answer:
+
+```java
+int highest = 0;
+for (int i = 1; i < dailySales.size(); i++) {
+```
+
+It starts at index **1**, so the first day is never considered. It also starts from `0`, so every value being negative would return `0`.
+
+It printed `14` and looked fine — because the highest value happens to sit at index 1 in this data.
+
+Add one line to `main` before the others:
+
+```java
+report.recordSale("Monitor", 99);
+```
+
+Now run it. The highest day is 99 and it still won't say so.
+
+**The agent could only see what the run revealed.** The bug was there the whole time; the test data just never exposed it.
+
+### Step 4: One decision it made for you
+
+Check what it did about the empty report. Most likely you'll see:
+
+```
+Lowest day:         0
+```
+
+Nothing in your instructions said what an empty report should do. Returning `0` is a design decision it made silently — and it's the choice that hides the problem, because a caller now can't tell "no sales recorded" from "sales were zero."
+
+```
+Why did you return 0 for an empty report rather than throwing? Which would
+you choose for a reporting class, and what breaks with each?
+```
+
+### What That Showed You
+
+| Signal the agent had | What it caught |
+|---|---|
+| Compiler errors | The semicolon, `Map.add`, `List.length` |
+| Runtime exceptions | The null title, the empty-list crash |
+| Exit code 0 | Nothing. It only means "it ran" |
+
+Everything in the first two rows announced itself. Something handed the agent the evidence, and it dealt with each one quickly and correctly — that part is genuinely impressive, and it would have taken you a lot longer by hand.
+
+Everything that stayed broken had one thing in common: **it produced a plausible number and no complaint from anything.** The compiler was satisfied. The runtime was satisfied. The agent was satisfied.
+
+The only reason you found them is that you knew what the answers should be.
+
+**A test would have closed that gap.** One assertion that `averageSales()` returns `10.0` turns a silent wrong answer into a failing signal — and the agent iterates on failing signals all day. That's what tests are really for here: not just catching your mistakes, but giving an autonomous agent something to tell it whether it's finished or merely quiet.
+
+**And the habit worth keeping:** when you hand Copilot a logic bug, never ask *"is there a bug here?"* Tell it what you expected and what you got.
 
 ---
 
-## Part 5: Working With Your Own Objects
+# Part 5: Custom Agents (5 min)
 
-Everything so far has stored Strings and numbers. Real applications store your own objects — products, customers, orders. That introduces something you need to know about.
+If there's a kind of request you make constantly, you shouldn't be retyping the instructions every time.
 
-### The Problem
+A **custom agent** is a saved, named mode with its own instructions — it appears in the mode dropdown alongside Ask, Agent, and Plan.
 
-Suppose you write an ordinary class to hold an item — an id, a name, and a price. Nothing unusual about it.
+**Create `.github/agents/reviewer.agent.md`:**
 
-Now put two identical items into a Set:
+```markdown
+---
+description: Reviews Java code for correctness and design problems without making edits.
+name: Reviewer
+---
 
-```java
-Set<Item> items = new HashSet<>();
-items.add(new Item("P1", "Laptop", 999.0));
-items.add(new Item("P1", "Laptop", 999.0));   // exactly the same data
+# Review instructions
 
-System.out.println(items.size());   // 2 — the duplicate was NOT removed
+You are a senior Java engineer reviewing code before it reaches production.
+
+Identify correctness bugs, unhandled edge cases, and design problems. For 
+each issue, describe the specific scenario where it causes a failure and 
+rate its severity as HIGH, MEDIUM, or LOW.
+
+Pay particular attention to:
+- Exception handling that hides failures rather than surfacing them
+- Arithmetic on monetary values
+- Mutable state exposed through getters
+- Boundary conditions in comparisons
+
+Do not edit any files. Report findings only.
 ```
 
-Same id, same name, same price. Yet the Set kept both.
+**Now open the mode dropdown.** "Reviewer" appears as an option. Select it, open any class, and simply say:
 
-**Why?** Because by default Java compares objects by their **memory address**, not by the values inside them. You called `new` twice, so there are two objects sitting at two different addresses. As far as Java is concerned they are two different things, and the Set's uniqueness check never had a chance.
-
-### What Is a Record?
-
-A **record is just a class** — a shorter kind of class, built for one job: holding data.
-
-Think about what you normally write for a data class. Private fields, a constructor, a getter for every field, a `toString()`. Thirty or forty lines, almost all of it boilerplate.
-
-A record collapses all of that into one line:
-
-```java
-record Item(String id, String name, double price) { }
+```
+Review this
 ```
 
-Java reads that and generates the fields, the constructor, the getters, `toString()`, and the logic for comparing one item to another.
+You get the same structured review without retyping the instructions.
 
-When you write `new Item("P1", "Laptop", 999.0)` you are creating an ordinary object, exactly as with any class. A thousand of those is a thousand objects.
-
-> **Note:** Records are covered fully in a later lesson. For now you only need to know that a record is a short way to write a data class, and that it comes with correct comparison behaviour built in.
-
-### The Fix
-
-Run exactly the same code, but with `Item` declared as a record:
-
-```java
-record Item(String id, String name, double price) { }
-
-Set<Item> items = new HashSet<>();
-items.add(new Item("P1", "Laptop", 999.0));
-items.add(new Item("P1", "Laptop", 999.0));
-
-System.out.println(items.size());   // 1 — duplicate correctly removed
-```
-
-The duplicate disappears.
-
-**The difference in one sentence:** a record knows how to compare itself by its values. A plain class does not, so the Set saw two different things.
-
-### Two Things to Know
-
-**Getters have no `get` prefix.** It is `item.name()`, not `item.getName()`.
-
-```java
-Item laptop = new Item("P1", "Laptop", 999.0);
-
-System.out.println(laptop.name());    // Laptop
-System.out.println(laptop.price());   // 999.0
-System.out.println(laptop);           // Item[id=P1, name=Laptop, price=999.0]
-```
-
-**Records are immutable.** Once created, the values cannot change. There are no setters. If you need different values, you create a new object. That is exactly why records are safe as Map keys — a key whose value changed underneath you would no longer be found where it was stored.
-
-### When Does This Actually Matter?
-
-The rule is narrower than "always use records". It applies to objects Java has to **compare**:
-
-- **Set elements** — the Set compares elements to enforce uniqueness
-- **Map keys** — the Map compares keys to find the right entry
-
-It does not matter for **Map values** or **List elements**, because those are never compared for uniqueness.
-
-> **The rule:** if Java needs to compare your object to decide "have I seen this one before?", make it a record.
-
-> **Note:** If you created a file earlier in this lesson that declares a class with the same name, delete or rename it first. Two files declaring the same type in one folder will not compile.
-
-### 👨‍💻 Activity 3: The Product Catalogue **(10 minutes)**
-
-1. Create a `record CatalogueItem(String id, String name, double price)`.
-2. Create a `List<CatalogueItem>` and add at least six items. Include **two entries that are exactly identical**.
-3. Print the list and its size, and confirm the duplicate is present.
-4. Create a `Set<CatalogueItem>` from your list. Print its size and confirm the duplicate has been removed automatically.
-
-> **Note:** the record is named `CatalogueItem` rather than `Item` or `Product` so that it does not clash with any file you created earlier in this lesson.
+> **Why this matters in a team:** a custom agent committed to the repository means every engineer reviews against the same standards. It turns one person's review checklist into something the whole team applies automatically.
 
 ---
 
-## Part 6: Sorting With Comparators
+# Wrap-Up
 
-Java gives you two methods for sorting, and which one you use depends on what you are sorting.
+## What to Take Away
 
-- **`Arrays.sort()`** — for arrays. `int[]`, `String[]`, anything with square brackets.
-- **`Collections.sort()`** — for Lists. ArrayList, LinkedList.
+**The mode matters.** Ask, Agent, and Plan produce very different behaviour from the same prompt. Know which one you're in.
 
-Both sort **in place**. They modify what you give them and return nothing. Writing
-`numbers = Arrays.sort(numbers);` is a compile error, and it is a common first attempt.
+**Context is the constraint.** Copilot will find source files on its own, but it can't reach your errors, your terminal output, or a screenshot. Attach those. Check the "Used N references" line to see what it actually read.
 
-```java
-int[] prices = {999, 299, 499};
-Arrays.sort(prices);                  // [299, 499, 999]
+**Specificity beats politeness.** A reasonable-sounding vague request produces a rewrite you have to audit. Stating the action, target, constraint, and standard produces exactly what you asked for.
 
-List<String> names = new ArrayList<>(List.of("Phone", "Laptop", "Tablet"));
-Collections.sort(names);              // [Laptop, Phone, Tablet]
-```
+**Fundamentals are what let you prompt well.** The precise prompt in Part 3 required knowing what an off-by-one error is, why catching generic `Exception` is dangerous, and what truncation does to money. Copilot didn't supply that knowledge. You did.
 
-Both of those worked without any extra effort because Strings and numbers already know how to
-order themselves. That built-in ordering is called **natural ordering** — alphabetical for
-Strings, numerical for numbers.
+**Agent Mode makes design decisions.** It resolves ambiguity by choosing an approach. On familiar ground that's leverage; on unfamiliar ground it's a liability.
 
-Your own objects do not have one. A `CatalogueItem` has an id, a name and a price, and Java has no
-way of knowing which one you want to sort by. **You have to tell it**, and the thing you use to
-tell it is a **Comparator**.
+**A clean run is not a correct run.** The compiler and the runtime catch bugs that announce themselves. Whether anything catches a wrong-but-plausible number depends on the model that day — unless you wrote a test, or you knew the answer yourself.
 
-A Comparator is simply a rule for deciding order.
+## The Honest Summary
 
-```java
-record CatalogueItem(String id, String name, double price) { }
+Copilot moved from autocomplete to autonomous agent in about three years. The features shift constantly — commands get renamed, panels get merged, modes disappear. You saw several examples of that in this lesson.
 
-List<CatalogueItem> catalogue = new ArrayList<>(List.of(
-    new CatalogueItem("P1", "Laptop", 999.0),
-    new CatalogueItem("P2", "Phone", 499.0),
-    new CatalogueItem("P3", "Tablet", 499.0)
-));
+What doesn't change is the underlying relationship: **the better you understand the code, the more value you get from the tool.** Engineers who understand systems deeply use this to move considerably faster. Engineers who don't use it to generate code they can't evaluate.
 
-// Sort by price, lowest first
-catalogue.sort(Comparator.comparing(CatalogueItem::price));
-```
-
-Read that last line in plain English: *sort these, comparing by price.*
-
-### What `::` means
-
-`CatalogueItem::price` is a **method reference**. It is shorthand for "take each item and get its
-price". The longer way of writing exactly the same thing is a lambda:
-
-```java
-Comparator.comparing(item -> item.price())     // the long form
-Comparator.comparing(CatalogueItem::price)     // the same thing, shorter
-```
-
-The pattern is `ClassName::methodName`, and it means "call this method on each element".
-
-Note that you are not calling the method yourself — there are no brackets after `price`. You are
-handing the method over for Java to call later, once per element.
-
-> **Note:** Method references and lambdas are covered fully in a later lesson. For now, recognise
-> the shape.
-
-### Chaining and reversing
-
-Two more things you will use constantly.
-
-```java
-// Sort by price, then by name where prices are equal
-catalogue.sort(Comparator.comparing(CatalogueItem::price)
-                         .thenComparing(CatalogueItem::name));
-
-// Highest price first
-catalogue.sort(Comparator.comparing(CatalogueItem::price).reversed());
-```
-
-`thenComparing()` is the tie-breaker — it is only used when the first comparison comes out equal.
-`reversed()` flips the whole order.
-
-These chains read left to right like a sentence: *comparing by price, then by name, reversed.*
-That readability is why this style replaced the older way of writing comparators.
-
-> **Note:** `list.sort(...)` and `Collections.sort(list, ...)` both work and do the same thing.
-> `list.sort()` is the newer form and is generally preferred in modern code.
+The tool amplifies whichever one you are.
 
 ---
 
-## 🔵 Optional: Sequenced Collections (Java 21)
 
-> Covered in Lesson 3.5. Included here for reference.
 
-Java 21 added a shared set of methods to collections that have a defined order — `List`, `LinkedHashMap`, and `LinkedHashSet`.
-
-```java
-List<String> catalogue = new ArrayList<>(List.of("Laptop", "Phone", "Tablet"));
-
-System.out.println(catalogue.getFirst());   // Laptop
-System.out.println(catalogue.getLast());    // Tablet
-System.out.println(catalogue.reversed());   // [Tablet, Phone, Laptop]
-```
-
-Previously you had to write `catalogue.get(0)` and `catalogue.get(catalogue.size() - 1)`. These methods make the intent clearer and work consistently across ordered collections.
-
----
-
-## Activity: Stock Check **(12 minutes)**
-
-A shop tracks how many of each product is in stock.
-
-1. Create a `Map<String, Integer>` called `stockLevels` and add five products
-   with their quantities. Make sure two of them are under 10.
-
-2. Using `entrySet()`, print every product and its quantity.
-
-3. Using `entrySet()` again, print only the products with fewer than 10 in stock,
-   as a low-stock warning.
-
-4. Using `values()`, add up all the quantities and print the total.
-
-5. Copy the whole thing into a `TreeMap` with
-   `Map<String, Integer> sortedStock = new TreeMap<>(stockLevels);`
-   and print it again. What changed?
-
-6. Group the products into two lists — **"Low stock"** for anything under 10, and **"Well stocked"** for everything else. Use a `Map<String, List<String>>` and `computeIfAbsent()`. Print the whole grouped map, then print just the low stock list.
-    
-
-## Part 7: Comparison and Summary
-
-| Data Structure | Type | Ordered | Duplicates | Fast at | Slower at |
-|----------------|------|---------|------------|---------|-----------|
-| Array | Linear | Yes | Yes | Access by index | Fixed size, cannot grow |
-| ArrayList | Linear | Yes | Yes | Access by index | Inserting in the middle |
-| LinkedList | Linear | Yes | Yes | Adding and removing at the ends | Access by index |
-| ArrayDeque | Linear | Yes | Yes | Adding and removing at both ends | Access by index |
-| HashMap | Hash-Based | No | Keys unique | Lookup by key | No ordering |
-| LinkedHashMap | Hash-Based | Insertion order | Keys unique | Lookup by key, keeps order | Slightly more memory |
-| TreeMap | Hash-Based | Sorted by key | Keys unique | Sorted key access | Slower than HashMap |
-| HashSet | Hash-Based | No | No | Checking membership | No ordering |
-| LinkedHashSet | Hash-Based | Insertion order | No | Membership, keeps order | Slightly more memory |
-| TreeSet | Hash-Based | Sorted | No | Sorted unique access | Slower than HashSet |
-
----
-
-### Choosing a Data Structure
-
-Ask these questions in order:
-
-1. **Do I look things up by a key?** → Use a `Map`.
-2. **Do I need every element to be unique?** → Use a `Set`.
-3. **Do I need to add and remove from the ends?** → Use `ArrayDeque`.
-4. **Otherwise** → Use a `List`, and `ArrayList` unless you have a reason not to.
-
-Then, if you chose a Map or a Set:
-
-- No ordering needed → `HashMap` / `HashSet`
-- Insertion order needed → `LinkedHashMap` / `LinkedHashSet`
-- Sorted order needed → `TreeMap` / `TreeSet`
-
-**Sensible defaults:** `ArrayList` and `HashMap` cover the large majority of everyday cases. Choose something else only when you have a specific reason.
-
----
-
-### Key Takeaways
-- The Java Collections Framework provides ready-made, tested data structures. Declare by interface, create by class.
-- Arrays are fixed size and fast for indexed access. ArrayList adds flexibility on top of an array.
-- LinkedList and ArrayDeque are built for adding and removing at the ends. Prefer `ArrayDeque` over `Stack`.
-- HashMap and HashSet use hashing for fast lookup, at the cost of ordering.
-- LinkedHashMap and LinkedHashSet preserve insertion order. TreeMap and TreeSet keep data sorted.
-- Use a `record` for objects stored in Sets or used as Map keys — it compares by value, so duplicates are detected correctly.
-- Default to `ArrayList` and `HashMap`, and change only when you have a reason.
-
----
-
-**End of Lesson 3.4**
+END
